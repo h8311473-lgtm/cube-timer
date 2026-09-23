@@ -32,11 +32,17 @@ venv/
 .mypy_cache/
 *.egg-info/
 
-# ---- cube-timer 运行时数据与测试产物 ----
-# 程序会在缺少这些文件时自动重建（见 cube_timer.py 的 load_solves / load_settings），
-# 属个人使用数据，不应提交。
+# ---- cube-timer 运行时数据与开发产物 ----
+# 程序会在缺少这些文件时自动重建，属个人使用数据，不应提交。
 cube_times.json
 cube_times.json.bak
 cube_times.json.tmp
 cube_settings.json
 _tmp/
+
+# 手机版：测试重定向的数据、无头浏览器缓存、raw 截图
+mobile/_tmp/
+mobile/test_cube_times.json
+mobile/test_cube_settings.json
+mobile/_browserprofile/
+mobile/screenshots/raw-*

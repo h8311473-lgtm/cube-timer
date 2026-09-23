@@ -1,0 +1,16 @@
+{
+  "name": "魔方计时器",
+  "short_name": "魔方计时",
+  "description": "手机端魔方计时器：按住准备、松手开始、再按停止，含 WCA 平均统计",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef1fb",
+  "theme_color": "#eef1fb",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -1,71 +1,55 @@
-# 魔方计时器 Cube Timer
+# Cube Timer · 魔方计时器
 
-电脑端魔方计时器（Windows / Python 标准库实现，**无需安装任何第三方包**）。
-界面风格：日间 / 夜间双主题、大圆角卡片、柔和渐变、药丸按钮。
+简洁的魔方计时器，两个版本共用同一套统计口径（WCA 规则）：
 
-## 运行方式
+| 版本 | 目录 | 技术栈 | 运行环境 |
+| --- | --- | --- | --- |
+| **电脑版** | [`desktop/`](desktop/) | Python + tkinter（零第三方依赖） | Windows / macOS / Linux |
+| **手机版** | [`mobile/`](mobile/) | 原生 HTML + CSS + JS（PWA，零依赖） | iPhone Safari / 安卓 Chrome |
 
-- 双击本文件夹里的 `play-cube-timer.bat`
-- 或在命令行运行：`python cube_timer.py`（需先 cd 到本文件夹）
+## 共同功能
 
-环境要求：Python 3.10 及以上（自带 tkinter 即可）。当前机器已验证 Python 3.13。
+- **按住准备 → 松开开始 → 再按停止**（电脑版按住空格键；手机版按住屏幕）
+- 统计：最好成绩、平均成绩、mo3、ao5、ao12、ao50、ao100
+- 平均遵循 **WCA 规则**：去掉最好与最差各一次后取算术平均；样本不足显示 `—`，计入部分含 DNF 则显示 `DNF`
+- DNF 标记、**删除本次成绩** / 删除选中、撤销、导出 CSV
+- 成绩自动保存在本地（电脑版 JSON 文件，手机版 localStorage）
+- 界面随窗口/屏幕尺寸自适应，高分屏（DPI）下清晰不裁切
 
-## 操作方式
+## 电脑版
 
-| 操作 | 说明 |
-| --- | --- |
-| 按住 `空格` 不放 | 计时卡片变绿（准备状态），松手前有 0.35 秒防手滑保护 |
-| 松开 `空格` | 立即开始计时 |
-| 再按 `空格` | 停止计时并记录成绩 |
-| `Esc` | 作废本次计时（不记录成绩） |
-| `Del` / `Ctrl+D` | **删除本次成绩**（最新一条） |
-| 单击成绩行 | 选中；再次点击取消选中；`Shift`/`Ctrl` 可多选 |
-| `D` | 将选中成绩标为 DNF（或取消标记） |
-| `Ctrl+Z` | 撤销删除 / 清空 / DNF 标记（最多 8 步） |
-| `Ctrl+E` | 导出 CSV（Excel 可直接打开） |
-| `Ctrl+L` | 切换日间 / 夜间模式（会被记住） |
+```bash
+cd desktop
+python cube_timer.py          # 或双击 play-cube-timer.bat
+```
 
-## 成绩统计
+- 界面：浅色 / 夜间双主题（`Ctrl+L` 切换，会被记住）、大圆角卡片、柔和渐变
+- 详细说明：[`desktop/README.md`](desktop/README.md)
+- 截图：[`desktop/screenshots/`](desktop/screenshots/)
 
-| 项目 | 说明 |
-| --- | --- |
-| 最好成绩 | 全部有效成绩中的最快一次 |
-| 平均成绩 | 全部有效成绩的算术平均（DNF 不计入） |
-| mo3 | 最近 3 次的平均（三次平均），含 DNF 即 DNF |
-| ao5 / ao12 / ao50 / ao100 | 最近 5 / 12 / 50 / 100 次的 WCA 平均 |
+## 手机版
 
-平均规则与 WCA 一致：**去掉最好与最差各一次后取算术平均**。
-样本不足所需次数时显示 `—`；被计入平均的部分含 DNF 时显示 `DNF`。
-列表中每一行也显示该次之后的 ao5 / ao12，方便观察趋势。
+```bash
+cd mobile
+node serve.js                 # 零依赖静态服务器，会打印手机访问地址
+```
 
-## 文件夹内容
+手机与电脑连同一 Wi-Fi，iPhone 用 **Safari** / 安卓用 **Chrome** 打开该地址，
+再「添加到主屏幕」即可当应用用（全屏、离线可用）。
 
-| 文件 | 说明 |
-| --- | --- |
-| `cube_timer.py` | 主程序（唯一需要运行的文件） |
-| `play-cube-timer.bat` | 双击启动器（用 pythonw 运行，不弹黑框） |
-| `cube_times.json` | 你的全部成绩，自动保存（写入采用原子替换，避免损坏） |
-| `cube_settings.json` | 界面偏好（日间 / 夜间主题） |
-| `test_cube_timer.py` | 统计逻辑自测（WCA 平均、时间格式化、存取往返） |
-| `test_cube_timer_gui.py` | GUI 冒烟测试（真实建窗 + 模拟空格计时 + 双主题 + 截图） |
-| `screenshots/` | 界面效果图（日间 / 夜间 / 准备态 / 计时结果） |
-
-删除 `cube_times.json` 与 `cube_settings.json` 即可恢复到初始状态。
-
-## 界面说明
-
-- 顶部计时卡片：空闲时显示上一次成绩，准备时变绿，计时中变浅紫，停止后显示本次成绩；数字为细体大字，随窗口一起放大。
-- 中间统计卡片：6 项统计，最好成绩为绿色，DNF 相关为红色。
-- 下方成绩卡片：自绘列表，最新一次为紫色、最好成绩为绿色、DNF 为红色；支持滚轮与滚动条。
-- 右下角 `夜间 / 日间` 按钮切换主题，`视图` 菜单里也能切换。
-- 窗口可任意缩放：字号与排版按窗口大小自动适配，高分屏（DPI 缩放）下自动放大且不会裁切文字。
+- 界面：浅色玻璃拟态（磨砂 + 高光 + 柔和渐变），无夜间模式
+- 详细说明：[`mobile/README.md`](mobile/README.md)
+- 截图：[`mobile/screenshots/`](mobile/screenshots/)
 
 ## 自测
 
 ```bash
-python test_cube_timer.py        # 秒级完成，纯逻辑
-python test_cube_timer_gui.py    # 约 5 秒，会真实开窗并截图
+cd desktop && python test_cube_timer.py && python test_cube_timer_gui.py
+cd mobile  && node tests/stats.test.js && node tests/page.check.js
 ```
 
-GUI 测试会把数据重定向到 `_tmp/`（通过 `CUBE_TIMER_DATA` 环境变量），
-**不会碰你的真实成绩**；截图输出在 `_tmp/` 下。
+## 说明
+
+- 两个版本都不联网、不上传任何数据，也不需要登录。
+- 成绩各自保存在本机，电脑版与手机版之间不互通。
+- 手机版是网页应用（PWA），装上主屏后与原生应用体验接近，但不是 App Store / 应用商店的安装包。

@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>魔方计时器</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="魔方计时">
+<meta name="theme-color" content="#eef1fb">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+  /* ===================== 基础 ===================== */
+  :root {
+    /* 玻璃拟态配色：浅色玻璃 + 柔紫/天蓝高光 */
+    --ink: #1b1c2b;
+    --ink-2: #5d6076;
+    --ink-3: #9297ad;
+    --glass: rgba(255, 255, 255, 0.58);
+    --glass-strong: rgba(255, 255, 255, 0.76);
+    --glass-line: rgba(255, 255, 255, 0.85);
+    --glass-shadow: 0 18px 40px rgba(76, 84, 140, 0.16), 0 2px 6px rgba(76, 84, 140, 0.08);
+    --good: #12a15c;
+    --bad: #e2564d;
+    --accent: #6d5ef0;
+    --radius: 26px;
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;                 /* 禁止整页滚动与橡皮筋 */
+    overscroll-behavior: none;
+    background: #eef1fb;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+                 "Helvetica Neue", "Noto Sans SC", sans-serif;
+    color: var(--ink);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;       /* 去掉双击缩放与 300ms 延迟 */
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 背景：柔和渐变 + 两团彩色高光（玻璃要透出后面这层颜色） */
+  #bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(60vw 45vh at 18% 8%, rgba(150, 170, 255, 0.55), transparent 70%),
+      radial-gradient(55vw 40vh at 88% 22%, rgba(255, 190, 220, 0.45), transparent 72%),
+      radial-gradient(70vw 55vh at 50% 108%, rgba(160, 220, 255, 0.5), transparent 70%),
+      linear-gradient(170deg, #f7f8ff 0%, #eaeefb 55%, #e6e9f8 100%);
+  }
+
+  /* ===================== 玻璃卡片 ===================== */
+  .glass {
+    position: relative;
+    background: var(--glass);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    overflow: hidden;
+  }
+  /* 顶部高光，模拟玻璃反光 */
+  .glass::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 42%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
+    pointer-events: none;
+  }
+  /* 状态色（准备/计时）作为一层薄薄的染色，保留玻璃质感 */
+  .glass .tint {
+    position: absolute;
+    inset: 0;
+    background: var(--tint, transparent);
+    opacity: 0;
+    transition: opacity .22s ease;
+    pointer-events: none;
+  }
+  .glass.tinted .tint { opacity: 1; }
+
+  /* ===================== 布局 ===================== */
+  #app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: calc(var(--sat) + 10px) 12px calc(var(--sab) + 10px);
+    min-height: 0;
+  }
+
+  /* --- 计时卡 --- */
+  #timerCard {
+    flex: 1 1 auto;
+    min-height: 34vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    --tint: transparent;
+  }
+  #timerCard[data-state="hold"]  { --tint: linear-gradient(180deg, rgba(255,255,255,.35), rgba(190,230,255,.35)); }
+  #timerCard[data-state="ready"] { --tint: linear-gradient(180deg, rgba(120,240,180,.34), rgba(60,210,140,.22)); }
+  #timerCard[data-state="run"]   { --tint: linear-gradient(180deg, rgba(160,150,255,.32), rgba(120,110,245,.22)); }
+
+  #timer {
+    font-size: min(21vw, 30vh);
+    line-height: 1;
+    font-weight: 200;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    color: var(--ink);
+    transition: color .18s ease;
+    z-index: 1;
+  }
+  #timerCard[data-state="ready"] #timer { color: #0f9c58; }
+  #timerCard[data-state="run"]   #timer { color: #5b4bd6; }
+  #timerCard[data-state="done"]  #timer { color: var(--accent); }
+
+  #hint {
+    z-index: 1;
+    margin-top: 10px;
+    font-size: 15px;
+    color: var(--ink-2);
+    text-align: center;
+    padding: 0 14px;
+    min-height: 20px;
+  }
+  #meta {
+    z-index: 1;
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: var(--ink-3);
+  }
+
+  /* --- 统计卡 --- */
+  #statsCard { flex: 0 0 auto; padding: 14px 16px 12px; }
+  #statGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));   /* minmax(0,·) 允许列被压缩，避免溢出 */
+    gap: 12px 8px;
+    z-index: 1;
+    position: relative;
+  }
+  .stat { min-width: 0; }
+  .stat .k { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+  .stat .v {
+    margin-top: 2px;
+    font-size: 21px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .stat .v.good { color: var(--good); }
+  .stat .v.bad { color: var(--bad); }
+  .stat .v.dim { color: var(--ink-3); font-weight: 500; }
+
+  /* --- 列表卡 --- */
+  #listCard {
+    flex: 1 1 auto;
+    min-height: 150px;
+    padding: 12px 6px 8px 12px;
+    display: flex;
+    flex-direction: column;
+  }
+  #listHead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0 8px 6px 2px;
+    z-index: 1;
+  }
+  #listHead b { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  #listHead span { font-size: 11.5px; color: var(--ink-3); }
+  #listWrap { flex: 1; position: relative; z-index: 1; min-height: 0; }
+  #list { display: block; width: 100%; height: 100%; touch-action: pan-y; }
+
+  /* --- 底部按钮 --- */
+  #actions {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .btn {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--glass-line);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    border-radius: 18px;
+    box-shadow: 0 8px 18px rgba(76, 84, 140, 0.12);
+    color: var(--ink-2);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 12px 2px;
+    min-width: 0;
+    min-height: 46px;
+    white-space: nowrap;
+    transition: transform .12s ease, background .18s ease, color .18s ease;
+  }
+  .btn:active { transform: scale(0.95); background: rgba(255,255,255,0.92); }
+  .btn.danger { color: var(--bad); }
+  .btn.on { background: rgba(120,110,245,0.18); color: #4c3fd0; border-color: rgba(120,110,245,0.32); }
+  .btn[disabled] { opacity: 0.45; }
+
+  /* --- 提示条 --- */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--sab) + 92px);
+    transform: translate(-50%, 12px);
+    padding: 10px 16px;
+    border-radius: 16px;
+    background: rgba(30, 32, 50, 0.82);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    color: #fff;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    max-width: 86vw;
+    text-align: center;
+    z-index: 20;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* 窄屏（iPhone 竖屏 390/375/360）压缩字号与间距，避免横向溢出 */
+  @media (max-width: 430px) {
+    #app { gap: 8px; padding-left: 10px; padding-right: 10px; }
+    #timer { font-size: min(19vw, 26vh); }
+    #hint { font-size: 13.5px; }
+    #statGrid { gap: 10px 6px; }
+    .stat .k { font-size: 10.5px; }
+    .stat .v { font-size: 18px; }
+    .btn { font-size: 11.5px; padding: 11px 1px; min-height: 44px; border-radius: 16px; }
+    #actions { gap: 6px; }
+    #listHead b { font-size: 12.5px; }
+    #listHead span { font-size: 10.5px; }
+  }
+
+  /* 横屏时压缩留白 */
+  @media (orientation: landscape) and (max-height: 520px) {
+    #timer { font-size: min(14vw, 26vh); }
+    #timerCard { min-height: 40vh; }
+    .stat .v { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<div id="app">
+  <!-- 计时区：整屏按住即准备 -->
+  <section id="timerCard" class="glass" data-state="idle">
+    <div class="tint"></div>
+    <div id="timer">0.00</div>
+    <div id="hint">按住屏幕不放，变绿后松手开始</div>
+    <div id="meta"></div>
+  </section>
+
+  <!-- 统计 -->
+  <section id="statsCard" class="glass">
+    <div id="statGrid"></div>
+  </section>
+
+  <!-- 成绩列表 -->
+  <section id="listCard" class="glass">
+    <div id="listHead">
+      <b>成绩记录</b><span id="listHint">点一下选中，再点取消</span>
+    </div>
+    <div id="listWrap"><canvas id="list"></canvas></div>
+  </section>
+
+  <!-- 操作 -->
+  <nav id="actions">
+    <button class="btn danger" id="btnDelLast">删除本次</button>
+    <button class="btn danger" id="btnDelSel">删除选中</button>
+    <button class="btn" id="btnDnf">DNF</button>
+    <button class="btn" id="btnUndo">撤销</button>
+    <button class="btn" id="btnCsv">导出</button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script src="stats.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const S = window.CubeStats;
+  const HOLD_MS = 300;          // 按住多久算“准备就绪”，防手滑
+  const STORE_KEY = 'cubeTimerMobile.v1';
+
+  // ---------- 状态 ----------
+  let solves = [];              // [{ms, dnf, ts, id}]
+  let timerState = 'idle';      // idle | hold | ready | running | done
+  let holdStart = 0, runStart = 0, finalMs = null;
+  let rafId = 0, wakeLock = null, toastTimer = 0;
+  const undoStack = [];
+  const selection = new Set();
+
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+  const card = $('timerCard'), timerEl = $('timer'), hintEl = $('hint'), metaEl = $('meta');
+  const grid = $('statGrid'), canvas = $('list'), ctx = canvas.getContext('2d');
+  const toastEl = $('toast'), listHint = $('listHint');
+
+  // ================= 持久化 =================
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+      const list = Array.isArray(raw.solves) ? raw.solves : [];
+      solves = list
+        .filter((s) => s && typeof s.ms === 'number')
+        .map((s) => ({ ms: Math.max(0, s.ms | 0), dnf: !!s.dnf, ts: s.ts || 0,
+                       id: s.id || Math.random().toString(36).slice(2) }));
+    } catch (e) { solves = []; }
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, solves: solves })); }
+    catch (e) { toast('保存失败：存储空间可能已满'); }
+  }
+
+  // ================= 渲染：统计 =================
+  function renderStats() {
+    const st = S.computeStats(solves);
+    if (!grid.childElementCount) {
+      S.STAT_ITEMS.forEach((it) => {
+        const d = document.createElement('div');
+        d.className = 'stat';
+        d.innerHTML = '<div class="k"></div><div class="v"></div>';
+        d.dataset.key = it.key;
+        d.querySelector('.k').textContent = it.label;
+        grid.appendChild(d);
+      });
+    }
+    S.STAT_ITEMS.forEach((it) => {
+      const v = grid.querySelector('[data-key="' + it.key + '"] .v');
+      const val = st.values[it.key];
+      v.textContent = S.formatStat(val);
+      v.className = 'v' + (val === null ? ' dim' : val === 'DNF' ? ' bad'
+                          : it.key === 'best' ? ' good' : '');
+    });
+    const bits = ['共 ' + st.count + ' 次'];
+    if (st.dnfCount) bits.push('DNF ' + st.dnfCount);
+    if (st.mean !== null) bits.push('平均 ' + S.formatStat(st.mean));
+    if (st.worst) bits.push('最慢 ' + S.formatMs(st.worst.ms));
+    metaEl.textContent = bits.join('  ·  ');
+  }
+
+  // ================= 渲染：列表（canvas 自绘） =================
+  let rowH = 34, dpr = 1, scrollTop = 0, hoverIdx = -1;
+
+  function resizeCanvas() {
+    const wrap = canvas.parentElement;
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.max(1, Math.round(wrap.clientWidth * dpr));
+    canvas.height = Math.max(1, Math.round(wrap.clientHeight * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    rowH = Math.max(30, Math.min(40, Math.round(wrap.clientHeight / 6)));
+    clampScroll();
+    drawList();
+  }
+
+  function totalH() { return solves.length * rowH; }
+  function viewH() { return canvas.height / dpr; }
+  function maxScroll() { return Math.max(0, totalH() - viewH()); }
+  function clampScroll() { scrollTop = Math.max(0, Math.min(scrollTop, maxScroll())); }
+
+  function drawList() {
+    const w = canvas.width / dpr, h = viewH();
+    ctx.clearRect(0, 0, w, h);
+    const bestIdx = S.bestIndex(solves);
+
+    if (!solves.length) {
+      ctx.fillStyle = 'rgba(120,126,150,0.75)';
+      ctx.font = '14px -apple-system, "PingFang SC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('还没有成绩，按住屏幕开始第一次计时', w / 2, h / 2);
+      ctx.textAlign = 'left';
+      drawScrollbar(h);
+      return;
+    }
+
+    const first = Math.max(0, Math.floor(scrollTop / rowH));
+    const last = Math.min(solves.length, Math.ceil((scrollTop + h) / rowH) + 1);
+    const padL = 10, numW = 30, timeW = rowH * 2.9, aoW = rowH * 2.4;
+    const xNum = padL, xTime = xNum + numW, xAo5 = xTime + timeW, xAo12 = xAo5 + aoW;
+    const xRight = w - 8;
+
+    for (let i = first; i < last; i++) {
+      const s = solves[i];
+      const y = i * rowH - scrollTop;
+      const mid = y + rowH / 2;
+
+      if (selection.has(i)) {
+        roundRect(padL - 6, y + 2, w - padL + 2, rowH - 4, 12);
+        ctx.fillStyle = 'rgba(120,110,245,0.14)';
+        ctx.fill();
+      }
+
+      const isLast = i === solves.length - 1;
+      let timeColor = '#22243a';
+      if (s.dnf) timeColor = '#e2564d';
+      else if (isLast) timeColor = '#5b4bd6';
+      else if (i === bestIdx) timeColor = '#12a15c';
+
+      const fNum = Math.round(rowH * 0.36), fTime = Math.round(rowH * 0.46);
+      ctx.font = fNum + 'px -apple-system, "SF Mono", monospace';
+      ctx.fillStyle = 'rgba(140,146,170,0.95)';
+      ctx.textAlign = 'left';
+      ctx.fillText(String(i + 1), xNum, mid + fNum * 0.35);
+
+      ctx.font = '600 ' + fTime + 'px -apple-system, "SF Mono", monospace';
+      ctx.fillStyle = timeColor;
+      ctx.fillText(S.solveText(s), xTime, mid + fTime * 0.35);
+
+      ctx.font = fNum + 'px -apple-system, "SF Mono", monospace';
+      ctx.fillStyle = 'rgba(140,146,170,0.95)';
+      const slice = solves.slice(0, i + 1);
+      ctx.fillText(S.formatStat(S.rollingAverage(slice, 5)), xAo5, mid + fNum * 0.35);
+      ctx.fillText(S.formatStat(S.rollingAverage(slice, 12)), xAo12, mid + fNum * 0.35);
+
+      if (s.ts && w > 330) {
+        ctx.textAlign = 'right';
+        const d = new Date(s.ts);
+        const txt = ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) +
+                    ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+        ctx.fillText(txt, xRight, mid + fNum * 0.35);
+        ctx.textAlign = 'left';
+      }
+    }
+    drawScrollbar(h);
+  }
+
+  function drawScrollbar(h) {
+    const total = totalH();
+    if (total <= h) return;
+    const barH = Math.max(28, h * h / total);
+    const y = (h - barH) * (scrollTop / Math.max(1, total - h));
+    roundRect(canvas.width / dpr - 4, y + 2, 3, barH - 4, 2);
+    ctx.fillStyle = 'rgba(120,126,150,0.35)';
+    ctx.fill();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function indexAt(clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const y = clientY - rect.top + scrollTop;
+    const idx = Math.floor(y / rowH);
+    return idx >= 0 && idx < solves.length ? idx : -1;
+  }
+
+  // ================= 计时状态机 =================
+  function setState(s) {
+    timerState = s;
+    card.dataset.state = s;
+    card.classList.toggle('tinted', s === 'hold' || s === 'ready' || s === 'run');
+  }
+
+  function setTimerText(txt, state) {
+    timerEl.textContent = txt;
+  }
+
+  function idleText() {
+    if (finalMs !== null) return S.formatMs(finalMs);
+    if (solves.length) return S.solveText(solves[solves.length - 1]);
+    return '0.00';
+  }
+
+  function idleHint() {
+    return finalMs !== null ? '已记录 · 按住开始下一次' : '按住屏幕不放，变绿后松手开始';
+  }
+
+  function toIdle() {
+    setState('idle');
+    timerEl.textContent = idleText();
+    hintEl.textContent = idleHint();
+  }
+
+  function onDown() {
+    if (timerState === 'running') { stopRun(); return; }
+    if (timerState === 'idle' || timerState === 'done') {
+      finalMs = null;
+      setState('hold');
+      holdStart = performance.now();
+      hintEl.textContent = '按住不放…';
+      tickHold();
+      if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
+    }
+  }
+
+  function onUp() {
+    if (timerState === 'hold') {
+      const held = performance.now() - holdStart;
+      if (held < HOLD_MS) {
+        toIdle();
+        toast('按住久一点再松手才会开始');
+      }
+      return;
+    }
+    if (timerState === 'ready') startRun();
+  }
+
+  function tickHold() {
+    if (timerState !== 'hold') return;
+    const held = performance.now() - holdStart;
+    const p = Math.min(1, held / HOLD_MS);
+    if (p >= 1) {
+      setState('ready');
+      timerEl.textContent = '0.00';
+      hintEl.textContent = '准备就绪 · 松手立即开始';
+      if (navigator.vibrate) { try { navigator.vibrate(18); } catch (e) {} }
+      return;
+    }
+    timerEl.textContent = p < 0.5 ? '0.00' : '0.0';
+    requestAnimationFrame(tickHold);
+    // 兜底：页面在后台时 rAF 会被暂停，用定时器保证状态仍能按时切换
+    setTimeout(() => { if (timerState === 'hold') tickHold(); }, 40);
+  }
+
+  function startRun() {
+    setState('running');
+    runStart = performance.now();
+    hintEl.textContent = '计时中 · 再按一下停止';
+    const loop = () => {
+      if (timerState !== 'running') return;
+      timerEl.textContent = S.formatMs(performance.now() - runStart);
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+    requestWakeLock();
+  }
+
+  function stopRun() {
+    if (timerState !== 'running') return;
+    cancelAnimationFrame(rafId);
+    const ms = performance.now() - runStart;
+    finalMs = ms;
+    solves.push({ ms: Math.round(ms), dnf: false, ts: Date.now(),
+                  id: Math.random().toString(36).slice(2) });
+    selection.clear();
+    save();
+    setState('done');
+    timerEl.textContent = S.formatMs(ms);
+    hintEl.textContent = '已记录 · 按住开始下一次';
+    if (navigator.vibrate) { try { navigator.vibrate([12, 40, 12]); } catch (e) {} }
+    renderStats();
+    scrollTop = maxScroll();
+    drawList();
+  }
+
+  function cancelRun() {
+    if (timerState === 'running' || timerState === 'hold' || timerState === 'ready') {
+      cancelAnimationFrame(rafId);
+      finalMs = null;
+      toIdle();
+      toast('本次已作废，未记录成绩');
+    }
+  }
+
+  // ================= 操作 =================
+  function pushUndo(reason) {
+    undoStack.push({ solves: solves.map((s) => Object.assign({}, s)), reason: reason });
+    if (undoStack.length > 8) undoStack.shift();
+  }
+
+  function deleteLast() {
+    if (!solves.length) { toast('还没有成绩可以删除'); return; }
+    pushUndo('删除本次成绩');
+    const removed = solves.pop();
+    finalMs = null;
+    selection.clear();
+    save();
+    toIdle();
+    renderStats();
+    scrollTop = maxScroll();
+    drawList();
+    toast('已删除本次成绩 ' + S.solveText(removed));
+  }
+
+  function deleteSelected() {
+    const idx = Array.from(selection).sort((a, b) => b - a);
+    if (!idx.length) { toast('先点一下列表里的成绩'); return; }
+    pushUndo('删除选中成绩');
+    idx.forEach((i) => solves.splice(i, 1));
+    selection.clear();
+    save();
+    toIdle();
+    renderStats();
+    clampScroll();
+    drawList();
+    toast('已删除 ' + idx.length + ' 条');
+  }
+
+  function toggleDnf() {
+    let target = Array.from(selection);
+    if (!target.length && solves.length) target = [solves.length - 1];
+    if (!target.length) { toast('还没有成绩'); return; }
+    pushUndo('切换 DNF');
+    target.forEach((i) => { if (solves[i]) solves[i].dnf = !solves[i].dnf; });
+    save();
+    renderStats();
+    drawList();
+    toast('已切换 DNF 标记');
+  }
+
+  function undo() {
+    if (!undoStack.length) { toast('没有可撤销的操作'); return; }
+    const snap = undoStack.pop();
+    solves = snap.solves;
+    selection.clear();
+    save();
+    toIdle();
+    renderStats();
+    clampScroll();
+    drawList();
+    toast('已撤销：' + snap.reason);
+  }
+
+  function exportCsv() {
+    if (!solves.length) { toast('还没有成绩可以导出'); return; }
+    const csv = '\ufeff' + S.toCSV(solves);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cube_times_' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast('已导出 CSV（在“文件”或下载里查看）');
+  }
+
+  function toggleSelect(idx) {
+    if (idx < 0) { selection.clear(); }
+    else if (selection.has(idx)) selection.delete(idx);
+    else selection.add(idx);
+    drawList();
+    listHint.textContent = selection.size
+      ? '已选中 ' + selection.size + ' 条 · 可删除或标 DNF'
+      : '点一下选中，再点取消';
+  }
+
+  function toast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1900);
+  }
+
+  // ================= 屏幕常亮 =================
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator && !wakeLock) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      }
+    } catch (e) { /* 不支持或被拒绝：忽略 */ }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && timerState === 'running') requestWakeLock();
+  });
+
+  // ================= 事件绑定 =================
+  function bindInput() {
+    // 用 pointer 事件：iPhone 上触摸、电脑上鼠标都能用
+    card.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      onDown();
+    });
+    card.addEventListener('pointerup', (ev) => {
+      ev.preventDefault();
+      onUp();
+    });
+    card.addEventListener('pointercancel', () => {
+      if (timerState === 'hold' || timerState === 'ready') { finalMs = null; toIdle(); }
+    });
+    // 兜底：手指滑出计时卡后松开
+    window.addEventListener('pointerup', (ev) => {
+      if (timerState === 'hold' || timerState === 'ready') onUp();
+    });
+    // 键盘（电脑上调试也能用）
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !e.repeat) { e.preventDefault(); onDown(); }
+      if (e.code === 'Escape') cancelRun();
+      if (e.code === 'Delete') deleteLast();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') { e.preventDefault(); onUp(); }
+    });
+
+    // 列表：点击选中 / 上下滑动滚动
+    let touchStartY = 0, dragging = false, startScroll = 0;
+    canvas.addEventListener('pointerdown', (ev) => {
+      touchStartY = ev.clientY;
+      startScroll = scrollTop;
+      dragging = false;
+      canvas.setPointerCapture(ev.pointerId);
+    });
+    canvas.addEventListener('pointermove', (ev) => {
+      const dy = ev.clientY - touchStartY;
+      if (Math.abs(dy) > 6) dragging = true;
+      if (dragging) {
+        scrollTop = startScroll - dy;
+        clampScroll();
+        drawList();
+      }
+    });
+    canvas.addEventListener('pointerup', (ev) => {
+      if (!dragging) toggleSelect(indexAt(ev.clientY));
+      else if (ev.clientY - touchStartY < -40) { /* 下滑：忽略 */ }
+      dragging = false;
+    });
+    canvas.addEventListener('wheel', (ev) => {
+      ev.preventDefault();
+      scrollTop += ev.deltaY;
+      clampScroll();
+      drawList();
+    }, { passive: false });
+
+    $('btnDelLast').addEventListener('click', deleteLast);
+    $('btnDelSel').addEventListener('click', deleteSelected);
+    $('btnDnf').addEventListener('click', toggleDnf);
+    $('btnUndo').addEventListener('click', undo);
+    $('btnCsv').addEventListener('click', exportCsv);
+
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 250));
+  }
+
+  // 防止双击缩放 / 下拉刷新
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (e.target === canvas) return;             // 列表内允许滑动
+    e.preventDefault();
+  }, { passive: false });
+
+  // ================= 启动 =================
+  load();
+  bindInput();
+  resizeCanvas();
+  renderStats();
+  toIdle();
+
+  // 仅用于自动化截图：?state=ready|running|done 直接摆出对应界面
+  // （不影响正常使用，正常打开时没有任何参数）
+  const preset = new URLSearchParams(location.search).get('state');
+  if (preset === 'ready') {
+    setState('ready');
+    timerEl.textContent = '0.00';
+    hintEl.textContent = '准备就绪 · 松手立即开始';
+  } else if (preset === 'running') {
+    setState('running');
+    timerEl.textContent = '4.27';
+    hintEl.textContent = '计时中 · 再按一下停止';
+  } else if (preset === 'done') {
+    setState('done');
+    timerEl.textContent = '12.34';
+    hintEl.textContent = '已记录 · 按住开始下一次';
+  }
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
