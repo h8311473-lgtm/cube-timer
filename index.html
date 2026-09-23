@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>魔方计时器 Cube Timer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eef1fb">
+<meta name="description" content="简洁的魔方计时器：按住准备、松手开始、再按停止，含 WCA 平均统计。电脑版与手机版。">
+<style>
+  :root {
+    --ink: #1b1c2b; --ink-2: #5d6076; --ink-3: #9297ad;
+    --glass: rgba(255,255,255,.58); --line: rgba(255,255,255,.85);
+    --radius: 26px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+                 "Microsoft YaHei UI", "Helvetica Neue", sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 24px 18px;
+    background:
+      radial-gradient(60vw 45vh at 18% 8%, rgba(150,170,255,.55), transparent 70%),
+      radial-gradient(55vw 40vh at 88% 22%, rgba(255,190,220,.45), transparent 72%),
+      radial-gradient(70vw 55vh at 50% 108%, rgba(160,220,255,.5), transparent 70%),
+      linear-gradient(170deg, #f7f8ff 0%, #eaeefb 55%, #e6e9f8 100%);
+    background-attachment: fixed;
+  }
+  .wrap { width: 100%; max-width: 560px; }
+  .card {
+    position: relative; background: var(--glass); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 30px 26px 26px;
+    box-shadow: 0 18px 40px rgba(76,84,140,.16), 0 2px 6px rgba(76,84,140,.08);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+  }
+  .card::after {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+    pointer-events: none; border-radius: var(--radius) var(--radius) 0 0;
+  }
+  h1 { font-size: 26px; margin: 0 0 6px; font-weight: 600; letter-spacing: -.01em; }
+  .sub { color: var(--ink-2); font-size: 14px; margin-bottom: 22px; }
+  .clock { font-size: 54px; font-weight: 200; letter-spacing: -.02em; text-align: center;
+           margin: 4px 0 20px; color: #5b4bd6; font-variant-numeric: tabular-nums; }
+  .row { display: grid; gap: 10px; }
+  a.btn {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    text-decoration: none; color: var(--ink);
+    background: rgba(255,255,255,.72); border: 1px solid var(--line);
+    border-radius: 18px; padding: 15px 18px; font-size: 15px; font-weight: 600;
+    box-shadow: 0 8px 18px rgba(76,84,140,.10); position: relative; z-index: 1;
+    transition: transform .12s ease, background .18s ease;
+  }
+  a.btn:active { transform: scale(.98); background: #fff; }
+  a.btn.primary { background: linear-gradient(135deg, #7c6cf0, #5b8bf0); color: #fff;
+                  border-color: transparent; }
+  a.btn small { font-weight: 400; opacity: .78; font-size: 12.5px; }
+  .meta { margin-top: 20px; color: var(--ink-3); font-size: 12.5px; line-height: 1.7;
+          position: relative; z-index: 1; }
+  ul { margin: 8px 0 0; padding-left: 18px; color: var(--ink-2); font-size: 13px; line-height: 1.9; }
+  .foot { text-align: center; color: var(--ink-3); font-size: 12px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>魔方计时器</h1>
+    <div class="sub">按住准备 · 松手开始 · 再按停止 —— 含 WCA 标准平均统计</div>
+    <div class="clock">15.99</div>
+
+    <div class="row">
+      <a class="btn primary" href="mobile/">
+        <span>手机版（推荐）<br><small>iPhone / 安卓，浏览器直接打开</small></span>
+        <span>→</span>
+      </a>
+      <a class="btn" href="https://github.com/h8311473-lgtm/cube-timer/releases/latest">
+        <span>下载离线安装包<br><small>手机版 / 电脑版 zip</small></span>
+        <span>↓</span>
+      </a>
+      <a class="btn" href="https://github.com/h8311473-lgtm/cube-timer">
+        <span>电脑版源码<br><small>Python + tkinter，零依赖</small></span>
+        <span>↗</span>
+      </a>
+    </div>
+
+    <div class="meta">
+      手机版用法：iPhone 用 Safari 打开后点「分享 → 添加到主屏幕」，即可像应用一样全屏使用、离线可用。
+      <ul>
+        <li>统计：最好成绩、平均、mo3、ao5、ao12、ao50、ao100</li>
+        <li>平均按 WCA 规则：去掉最好与最差各一次</li>
+        <li>支持 DNF、删除本次成绩、撤销、导出 CSV</li>
+        <li>不联网、不上传数据、不需要登录</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot">Cube Timer · 电脑版与手机版共用同一套统计口径</div>
+</div>
+</body>
+</html>
