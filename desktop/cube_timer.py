@@ -62,11 +62,8 @@ LIGHT_THEME = {
     "name": "日间",
     "BG_TOP": "#fbfbfe",      # 背景渐变起点
     "BG_BOTTOM": "#e9e9f8",   # 背景渐变终点（淡紫）
-    "CARD": "#f6f6fc",
-    "CARD_TOP": "#fbfbff",
-    "CARD_BOTTOM": "#eef0fb",
-    "CARD_LINE": "#e4e2f2",
-    "CARD_HIGHLIGHT": "#ffffff",
+    "CARD": "#ffffff",
+    "CARD_LINE": "#eceaf6",
     "TEXT": "#1f2033",        # 主文字
     "MUTED": "#6f7189",       # 次要文字
     "FAINT": "#a2a4b8",       # 更弱提示
@@ -104,11 +101,8 @@ DARK_THEME = {
     "name": "夜间",
     "BG_TOP": "#0a0a0f",
     "BG_BOTTOM": "#14141d",
-    "CARD": "#1a1924",            # 玻璃卡片基色
-    "CARD_TOP": "#22202e",
-    "CARD_BOTTOM": "#15151e",
-    "CARD_LINE": "#38314f",
-    "CARD_HIGHLIGHT": "#4a4264",
+    "CARD": "#17161f",            # 卡片：带一点紫调
+    "CARD_LINE": "#2e2745",       # 深紫描边
     "TEXT": "#f2f2f7",
     "MUTED": "#9a9aa8",
     "FAINT": "#6e6e7d",
@@ -580,20 +574,6 @@ def draw_soft_shadow(canvas: tk.Canvas, x0, y0, x1, y1, r, base="#c9c7e4", tags=
     return items
 
 
-def draw_background_glow(canvas: tk.Canvas, cx: float, cy: float, radius: float,
-                        color: str, steps: int = 9, tags=()):
-    """用同背景色插值的同心圆模拟柔和环境光晕。"""
-    items = []
-    bg = t("BG_TOP")
-    for i in range(steps, 0, -1):
-        p = i / steps
-        r = radius * (0.35 + 0.65 * p)
-        fill = blend(bg, color, 0.055 * (1.0 - p) + 0.012)
-        items.append(canvas.create_oval(cx-r, cy-r, cx+r, cy+r,
-                                        fill=fill, outline="", tags=tags))
-    return items
-
-
 # --------------------------------------------------------------------------
 # 组件：圆角卡片
 # --------------------------------------------------------------------------
@@ -617,18 +597,12 @@ class Card:
         self.items = []
         self.items += draw_soft_shadow(c, x0, y0 + 1, x1, y1, self.radius,
                                        base=t("SHADOW"))
-        # Tkinter 原生控件没有真正的 backdrop-filter，因此用多层渐变、
-        # 内高光和细边框模拟玻璃折射/反射，视觉上比纯色卡片更通透。
-        self.items += draw_gradient_rect(c, x0, y0, x1, y1, self.radius,
-                                         t("CARD_TOP"), t("CARD_BOTTOM"))
         self.items.append(draw_round_rect(c, x0, y0, x1, y1, self.radius,
-                                          fill="", outline=self.outline or t("CARD_LINE"),
+                                          fill=t("CARD"),
+                                          outline=self.outline or t("CARD_LINE"),
                                           width=1))
-        self.items.append(draw_round_rect(c, x0 + 1, y0 + 1, x1 - 1, y0 + 3,
-                                          max(4, self.radius - 1), fill=t("CARD_HIGHLIGHT")))
-        self.items.append(draw_round_rect(c, x0 + 1.5, y0 + 1.5, x1 - 1.5, y1 - 1.5,
-                                          max(4, self.radius - 1.5),
-                                          fill="", outline=t("CARD_LINE"), width=1))
+        self.items.append(draw_round_rect(c, x0 + 1, y0 + 1, x1 - 1, y0 + 2.5,
+                                          self.radius, fill=t("CARD")))
 
 
 class PillButton:
@@ -1104,12 +1078,6 @@ class CubeTimerApp:
 
         self.bg.delete("bg")
         draw_gradient_rect(self.bg, 0, 0, W, H, 0, t("BG_TOP"), t("BG_BOTTOM"), tags="bg")
-        draw_background_glow(self.bg, W * 0.12, H * 0.10, min(W, H) * 0.34,
-                             "#9aa8ff", tags="bg")
-        draw_background_glow(self.bg, W * 0.88, H * 0.18, min(W, H) * 0.30,
-                             "#f2a9d0", tags="bg")
-        draw_background_glow(self.bg, W * 0.54, H * 1.03, min(W, H) * 0.40,
-                             "#8ed7ff", tags="bg")
 
         margin = px(22, f)
         gap = px(14, f)
