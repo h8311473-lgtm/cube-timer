@@ -18,11 +18,10 @@
     --ink: #1b1c2b;
     --ink-2: #5d6076;
     --ink-3: #9297ad;
-    --glass: rgba(255, 255, 255, 0.46);
-    --glass-strong: rgba(255, 255, 255, 0.68);
-    --glass-line: rgba(255, 255, 255, 0.72);
-    --glass-inner: rgba(255, 255, 255, 0.42);
-    --glass-shadow: 0 22px 55px rgba(68, 76, 130, 0.14), 0 4px 14px rgba(68, 76, 130, 0.08);
+    --glass: rgba(255, 255, 255, 0.58);
+    --glass-strong: rgba(255, 255, 255, 0.76);
+    --glass-line: rgba(255, 255, 255, 0.85);
+    --glass-shadow: 0 18px 40px rgba(76, 84, 140, 0.16), 0 2px 6px rgba(76, 84, 140, 0.08);
     --good: #12a15c;
     --bad: #e2564d;
     --accent: #6d5ef0;
@@ -59,46 +58,31 @@
     inset: 0;
     z-index: -1;
     background:
-      radial-gradient(42vw 34vh at 12% 4%, rgba(126, 150, 255, 0.42), transparent 72%),
-      radial-gradient(44vw 34vh at 92% 18%, rgba(255, 170, 210, 0.34), transparent 72%),
-      radial-gradient(52vw 40vh at 55% 106%, rgba(108, 202, 255, 0.34), transparent 72%),
-      radial-gradient(28vw 24vh at 52% 44%, rgba(255,255,255,0.38), transparent 74%),
-      linear-gradient(160deg, #f8f9ff 0%, #edf0fb 48%, #e6eafa 100%);
+      radial-gradient(60vw 45vh at 18% 8%, rgba(150, 170, 255, 0.55), transparent 70%),
+      radial-gradient(55vw 40vh at 88% 22%, rgba(255, 190, 220, 0.45), transparent 72%),
+      radial-gradient(70vw 55vh at 50% 108%, rgba(160, 220, 255, 0.5), transparent 70%),
+      linear-gradient(170deg, #f7f8ff 0%, #eaeefb 55%, #e6e9f8 100%);
   }
 
   /* ===================== 玻璃卡片 ===================== */
   .glass {
     position: relative;
-    background:
-      linear-gradient(145deg, rgba(255,255,255,.62), rgba(255,255,255,.34));
+    background: var(--glass);
     border: 1px solid var(--glass-line);
     border-radius: var(--radius);
     box-shadow: var(--glass-shadow);
-    -webkit-backdrop-filter: blur(28px) saturate(185%);
-    backdrop-filter: blur(28px) saturate(185%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
     overflow: hidden;
-    isolation: isolate;
   }
   /* 顶部高光，模拟玻璃反光 */
-  .glass::before {
-    content: "";
-    position: absolute;
-    inset: 1px;
-    border-radius: calc(var(--radius) - 1px);
-    border: 1px solid var(--glass-inner);
-    pointer-events: none;
-    z-index: 0;
-  }
   .glass::after {
     content: "";
     position: absolute;
     inset: 0 0 auto 0;
-    height: 46%;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,0)),
-      radial-gradient(80% 100% at 18% 0%, rgba(255,255,255,.34), transparent 70%);
+    height: 42%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
     pointer-events: none;
-    z-index: 0;
   }
   /* 状态色（准备/计时）作为一层薄薄的染色，保留玻璃质感 */
   .glass .tint {
@@ -217,15 +201,13 @@
   }
   .btn {
     -webkit-appearance: none;
-    position: relative;
     appearance: none;
     border: 1px solid var(--glass-line);
     background: var(--glass-strong);
     -webkit-backdrop-filter: blur(18px) saturate(160%);
     backdrop-filter: blur(18px) saturate(160%);
     border-radius: 18px;
-    box-shadow: 0 10px 24px rgba(76, 84, 140, 0.11), inset 0 1px 0 rgba(255,255,255,.62);
-    overflow: hidden;
+    box-shadow: 0 8px 18px rgba(76, 84, 140, 0.12);
     color: var(--ink-2);
     font-family: inherit;
     font-size: 12.5px;
@@ -236,14 +218,7 @@
     white-space: nowrap;
     transition: transform .12s ease, background .18s ease, color .18s ease;
   }
-  .btn::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,.38), transparent 45%);
-    pointer-events: none;
-  }
-  .btn:active { transform: scale(0.95); background: rgba(255,255,255,0.88); }
+  .btn:active { transform: scale(0.95); background: rgba(255,255,255,0.92); }
   .btn.danger { color: var(--bad); }
   .btn.on { background: rgba(120,110,245,0.18); color: #4c3fd0; border-color: rgba(120,110,245,0.32); }
   .btn[disabled] { opacity: 0.45; }
@@ -256,9 +231,7 @@
     transform: translate(-50%, 12px);
     padding: 10px 16px;
     border-radius: 16px;
-    background: rgba(30, 32, 50, 0.68);
-    border: 1px solid rgba(255,255,255,.16);
-    box-shadow: 0 16px 36px rgba(20,24,48,.18);
+    background: rgba(30, 32, 50, 0.82);
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
     color: #fff;
